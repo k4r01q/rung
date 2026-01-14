@@ -13,6 +13,44 @@ Rung helps you work with dependent branches by:
 
 ## Installation
 
+### Pre-built binaries (recommended)
+
+Download the latest release for your platform from [GitHub Releases](https://github.com/auswm85/rung/releases).
+
+**macOS (Apple Silicon):**
+```bash
+curl -fsSL https://github.com/auswm85/rung/releases/latest/download/rung-$(curl -s https://api.github.com/repos/auswm85/rung/releases/latest | grep tag_name | cut -d '"' -f 4 | sed 's/v//')-aarch64-apple-darwin.tar.gz | tar xz
+sudo mv rung /usr/local/bin/
+```
+
+**macOS (Intel):**
+```bash
+curl -fsSL https://github.com/auswm85/rung/releases/latest/download/rung-$(curl -s https://api.github.com/repos/auswm85/rung/releases/latest | grep tag_name | cut -d '"' -f 4 | sed 's/v//')-x86_64-apple-darwin.tar.gz | tar xz
+sudo mv rung /usr/local/bin/
+```
+
+**Linux (x86_64):**
+```bash
+curl -fsSL https://github.com/auswm85/rung/releases/latest/download/rung-$(curl -s https://api.github.com/repos/auswm85/rung/releases/latest | grep tag_name | cut -d '"' -f 4 | sed 's/v//')-x86_64-unknown-linux-gnu.tar.gz | tar xz
+sudo mv rung /usr/local/bin/
+```
+
+**Windows:** Download the `.zip` from [releases](https://github.com/auswm85/rung/releases) and add to your PATH.
+
+### From crates.io
+
+```bash
+cargo install rung-cli
+```
+
+### With cargo-binstall (faster, no compilation)
+
+```bash
+cargo binstall rung-cli
+```
+
+### From source
+
 ```bash
 cargo install --path crates/rung-cli
 ```

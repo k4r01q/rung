@@ -6,6 +6,9 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
+readme = "README.md"
+keywords = ["git", "git2", "vcs"]
+categories = ["development-tools"]
 
 [dependencies]
 git2 = { workspace = true }

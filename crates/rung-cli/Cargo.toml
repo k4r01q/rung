@@ -6,6 +6,17 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
+readme = "../../README.md"
+keywords = ["git", "github", "stacked-prs", "workflow", "cli"]
+categories = ["command-line-utilities", "development-tools"]
+
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/rung-{ version }-{ target }.{ archive-format }"
+bin-dir = "{ bin }{ binary-ext }"
+pkg-fmt = "tgz"
+
+[package.metadata.binstall.overrides.x86_64-pc-windows-msvc]
+pkg-fmt = "zip"
 
 [[bin]]
 name = "rung"
