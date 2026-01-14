@@ -234,6 +234,99 @@ impl Repository {
         Ok(self.inner.signature()?)
     }
 
+    // === Rebase operations ===
+
+    /// Rebase the current branch onto a target commit.
+    ///
+    /// Returns `Ok(())` on success, or `Err(RebaseConflict)` if there are conflicts.
+    ///
+    /// # Errors
+    /// Returns error if rebase fails or conflicts occur.
+    pub fn rebase_onto(&self, target: Oid) -> Result<()> {
+        let workdir = self.workdir().ok_or(Error::NotARepository)?;
+
+        let output = std::process::Command::new("git")
+            .args(["rebase", &target.to_string()])
+            .current_dir(workdir)
+            .output()
+            .map_err(|e| Error::RebaseFailed(e.to_string()))?;
+
+        if output.status.success() {
+            return Ok(());
+        }
+
+        // Check if it's a conflict
+        if self.is_rebasing() {
+            let conflicts = self.conflicting_files()?;
+            return Err(Error::RebaseConflict(conflicts));
+        }
+
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(Error::RebaseFailed(stderr.to_string()))
+    }
+
+    /// Get list of files with conflicts.
+    ///
+    /// # Errors
+    /// Returns error if status check fails.
+    pub fn conflicting_files(&self) -> Result<Vec<String>> {
+        let statuses = self.inner.statuses(None)?;
+        let conflicts: Vec<String> = statuses
+            .iter()
+            .filter(|s| s.status().is_conflicted())
+            .filter_map(|s| s.path().map(String::from))
+            .collect();
+        Ok(conflicts)
+    }
+
+    /// Abort an in-progress rebase.
+    ///
+    /// # Errors
+    /// Returns error if abort fails.
+    pub fn rebase_abort(&self) -> Result<()> {
+        let workdir = self.workdir().ok_or(Error::NotARepository)?;
+
+        let output = std::process::Command::new("git")
+            .args(["rebase", "--abort"])
+            .current_dir(workdir)
+            .output()
+            .map_err(|e| Error::RebaseFailed(e.to_string()))?;
+
+        if output.status.success() {
+            Ok(())
+        } else {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            Err(Error::RebaseFailed(stderr.to_string()))
+        }
+    }
+
+    /// Continue an in-progress rebase.
+    ///
+    /// # Errors
+    /// Returns error if continue fails or new conflicts occur.
+    pub fn rebase_continue(&self) -> Result<()> {
+        let workdir = self.workdir().ok_or(Error::NotARepository)?;
+
+        let output = std::process::Command::new("git")
+            .args(["rebase", "--continue"])
+            .current_dir(workdir)
+            .output()
+            .map_err(|e| Error::RebaseFailed(e.to_string()))?;
+
+        if output.status.success() {
+            return Ok(());
+        }
+
+        // Check if it's a conflict
+        if self.is_rebasing() {
+            let conflicts = self.conflicting_files()?;
+            return Err(Error::RebaseConflict(conflicts));
+        }
+
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(Error::RebaseFailed(stderr.to_string()))
+    }
+
     // === Low-level access ===
 
     /// Get a reference to the underlying git2 repository.
