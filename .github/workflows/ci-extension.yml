@@ -3,21 +3,33 @@ name: Extension CI
 on:
   push:
     branches: [main]
-    paths:
-      - "vscode-extension/**"
-      - ".github/workflows/ci-extension.yml"
   pull_request:
-    paths:
-      - "vscode-extension/**"
-      - ".github/workflows/ci-extension.yml"
 
 defaults:
   run:
     working-directory: vscode-extension
 
 jobs:
+  # Detect which paths changed
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      extension: ${{ steps.filter.outputs.extension }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            extension:
+              - 'vscode-extension/**'
+              - '.github/workflows/ci-extension.yml'
+
   lint:
     name: Lint
+    needs: changes
+    if: needs.changes.outputs.extension == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,6 +52,8 @@ jobs:
 
   build:
     name: Build
+    needs: changes
+    if: needs.changes.outputs.extension == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -59,3 +73,23 @@ jobs:
 
       - name: Package extension
         run: npx @vscode/vsce package --no-dependencies
+
+  # Final status check - this is the only required check in branch protection
+  extension-ci-status:
+    name: Extension CI Status
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [changes, lint, build]
+    steps:
+      - name: Check CI status
+        run: |
+          if [[ "${{ needs.changes.outputs.extension }}" != "true" ]]; then
+            echo "No extension changes detected, skipping checks"
+            exit 0
+          fi
+          if [[ "${{ needs.lint.result }}" == "failure" ]] || \
+             [[ "${{ needs.build.result }}" == "failure" ]]; then
+            echo "Extension CI failed"
+            exit 1
+          fi
+          echo "Extension CI passed"
