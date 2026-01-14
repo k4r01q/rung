@@ -2,12 +2,14 @@
 
 use anyhow::{Context, Result, bail};
 use rung_core::State;
+use rung_core::stack::Stack;
 use rung_git::Repository;
-use rung_github::{Auth, GitHubClient, MergeMethod, MergePullRequest};
+use rung_github::{Auth, GitHubClient, MergeMethod, MergePullRequest, UpdatePullRequest};
 
 use crate::output;
 
 /// Run the merge command.
+#[allow(clippy::too_many_lines)]
 pub fn run(method: &str, no_delete: bool) -> Result<()> {
     // Parse merge method
     let merge_method = match method.to_lowercase().as_str() {
@@ -50,6 +52,9 @@ pub fn run(method: &str, no_delete: bool) -> Result<()> {
 
     output::info(&format!("Merging PR #{pr_number} for {current_branch}..."));
 
+    // Collect all descendants that need to be rebased
+    let descendants = collect_descendants(&stack, &current_branch);
+
     // Create GitHub client and merge
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
@@ -70,7 +75,59 @@ pub fn run(method: &str, no_delete: bool) -> Result<()> {
 
         output::success(&format!("Merged PR #{pr_number}"));
 
-        // Delete remote branch if requested
+        // Process each descendant: update PR base, rebase, push
+        for branch_name in &descendants {
+            let branch_info = stack
+                .find_branch(branch_name)
+                .ok_or_else(|| anyhow::anyhow!("Branch '{branch_name}' not found in stack"))?;
+
+            let stack_parent = branch_info.parent.as_deref().unwrap_or("main");
+
+            // Determine the new base for this branch's PR
+            // Direct children of merged branch → parent_branch (e.g., main)
+            // Grandchildren → their parent branch (which we just rebased)
+            let new_base = if stack_parent == current_branch {
+                parent_branch.clone()
+            } else {
+                stack_parent.to_string()
+            };
+
+            // Update PR base on GitHub (before parent branch is deleted)
+            if let Some(child_pr_num) = branch_info.pr {
+                output::info(&format!(
+                    "  Updating PR #{child_pr_num} base to '{new_base}'..."
+                ));
+                let update = UpdatePullRequest {
+                    title: None,
+                    body: None,
+                    base: Some(new_base.clone()),
+                };
+                client
+                    .update_pr(&owner, &repo_name, child_pr_num, update)
+                    .await
+                    .with_context(|| format!("Failed to update PR #{child_pr_num} base"))?;
+            }
+
+            // Rebase onto new parent's tip
+            output::info(&format!("  Rebasing {branch_name} onto '{new_base}'..."));
+            repo.checkout(branch_name)?;
+
+            let new_base_commit = repo.branch_commit(&new_base)?;
+            if let Err(e) = repo.rebase_onto(new_base_commit) {
+                output::error(&format!("Rebase conflict in {branch_name}: {e}"));
+                output::warn(
+                    "Resolve conflicts, then run: git rebase --continue && git push --force",
+                );
+                bail!("Rebase failed - resolve conflicts before completing merge cleanup");
+            }
+
+            // Force push rebased branch
+            repo.push(branch_name, true)
+                .with_context(|| format!("Failed to push rebased {branch_name}"))?;
+            output::info(&format!("  Rebased and pushed {branch_name}"));
+        }
+
+        // Delete remote branch AFTER descendants are safe
         if !no_delete {
             match client.delete_ref(&owner, &repo_name, &current_branch).await {
                 Ok(()) => output::info(&format!("Deleted remote branch '{current_branch}'")),
@@ -126,4 +183,20 @@ pub fn run(method: &str, no_delete: bool) -> Result<()> {
     output::success("Merge complete!");
 
     Ok(())
+}
+
+/// Collect all descendants of a branch in topological order (parents before children).
+fn collect_descendants(stack: &Stack, root: &str) -> Vec<String> {
+    let mut descendants = Vec::new();
+    let mut queue = vec![root.to_string()];
+
+    while let Some(parent) = queue.pop() {
+        for branch in &stack.branches {
+            if branch.parent.as_ref().is_some_and(|p| p == &parent) {
+                descendants.push(branch.name.clone());
+                queue.push(branch.name.clone());
+            }
+        }
+    }
+    descendants
 }
