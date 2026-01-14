@@ -11,6 +11,7 @@ pub mod status;
 pub mod submit;
 pub mod sync;
 pub mod undo;
+pub mod update;
 
 /// Rung - The developer's ladder for stacked PRs.
 ///
@@ -131,4 +132,15 @@ pub enum Commands {
     /// Checks stack integrity, git state, sync status, and GitHub connectivity.
     #[command(alias = "doc")]
     Doctor,
+
+    /// Update rung to the latest version.
+    ///
+    /// Checks crates.io for the latest version and installs it using
+    /// cargo-binstall (fast) or cargo install (fallback).
+    #[command(alias = "up")]
+    Update {
+        /// Only check for updates without installing.
+        #[arg(long)]
+        check: bool,
+    },
 }

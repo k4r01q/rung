@@ -30,6 +30,7 @@ fn main() {
         Commands::Nxt => commands::navigate::run_next(),
         Commands::Prv => commands::navigate::run_prev(),
         Commands::Doctor => commands::doctor::run(),
+        Commands::Update { check } => commands::update::run(check),
     };
 
     if let Err(e) = result {
