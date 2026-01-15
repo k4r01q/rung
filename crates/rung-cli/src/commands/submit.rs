@@ -129,14 +129,11 @@ fn process_branches(
             generate_title(&branch_name)
         };
 
-        let body = generate_pr_body(&stack.branches, i);
-
         if let Some(pr_number) = existing_pr {
-            update_existing_pr(gh, pr_number, body, base_branch)?;
+            update_existing_pr(gh, pr_number, base_branch)?;
             updated += 1;
         } else {
-            let result =
-                create_or_find_pr(gh, &branch_name, base_branch, title, body, config.draft)?;
+            let result = create_or_find_pr(gh, &branch_name, base_branch, title, config.draft)?;
 
             stack.branches[i].pr = Some(result.pr_number);
             if result.was_created {
@@ -169,18 +166,13 @@ fn generate_title(branch_name: &str) -> String {
         .join(" ")
 }
 
-/// Update an existing PR.
-fn update_existing_pr(
-    gh: &GitHubContext<'_>,
-    pr_number: u64,
-    body: String,
-    base_branch: &str,
-) -> Result<()> {
+/// Update an existing PR (only updates base branch, preserves description).
+fn update_existing_pr(gh: &GitHubContext<'_>, pr_number: u64, base_branch: &str) -> Result<()> {
     output::info(&format!("  Updating PR #{pr_number}..."));
 
     let update = UpdatePullRequest {
         title: None,
-        body: Some(body),
+        body: None, // Preserve existing description
         base: Some(base_branch.to_string()),
     };
 
@@ -206,7 +198,6 @@ fn create_or_find_pr(
     branch_name: &str,
     base_branch: &str,
     title: String,
-    body: String,
     draft: bool,
 ) -> Result<PrResult> {
     // Check if PR already exists for this branch
@@ -221,9 +212,10 @@ fn create_or_find_pr(
     if let Some(pr) = existing {
         output::info(&format!("  Found existing PR #{}...", pr.number));
 
+        // Only update base branch, preserve existing description
         let update = UpdatePullRequest {
             title: None,
-            body: Some(body),
+            body: None,
             base: Some(base_branch.to_string()),
         };
 
@@ -245,7 +237,7 @@ fn create_or_find_pr(
 
     let create = CreatePullRequest {
         title,
-        body,
+        body: String::new(), // Start with empty body, user can fill in
         head: branch_name.to_string(),
         base: base_branch.to_string(),
         draft,
@@ -278,12 +270,6 @@ fn print_summary(created: usize, updated: usize) {
     } else {
         output::info("No changes to submit");
     }
-}
-
-/// Generate PR body (without stack - stack is in comments now).
-#[allow(clippy::missing_const_for_fn)]
-fn generate_pr_body(_branches: &[StackBranch], _current_idx: usize) -> String {
-    String::new()
 }
 
 /// Marker to identify rung stack comments.
