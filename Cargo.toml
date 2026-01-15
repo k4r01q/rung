@@ -11,9 +11,9 @@ rust-version = "1.85"
 
 [workspace.dependencies]
 # Internal crates
-rung-core = { version = "0.1.2", path = "crates/rung-core" }
-rung-git = { version = "0.1.2", path = "crates/rung-git" }
-rung-github = { version = "0.1.2", path = "crates/rung-github" }
+rung-core = { version = "0.1.3", path = "crates/rung-core" }
+rung-git = { version = "0.1.3", path = "crates/rung-git" }
+rung-github = { version = "0.1.3", path = "crates/rung-github" }
 
 # Git operations
 git2 = "0.19"
@@ -58,3 +58,27 @@ pedantic = { level = "warn", priority = -1 }
 nursery = { level = "warn", priority = -1 }
 unwrap_used = "warn"
 expect_used = "warn"
+
+[workspace.metadata.release]
+shared-version = true
+tag-name = "v{{version}}"
+pre-release-commit-message = "chore: release v{{version}}"
+tag-message = "v{{version}}"
+push = true
+publish = false  # CI handles crates.io publishing
+
+# Update internal crate versions in workspace.dependencies
+[[workspace.metadata.release.pre-release-replacements]]
+file = "Cargo.toml"
+search = 'rung-core = \{ version = "[^"]*"'
+replace = 'rung-core = { version = "{{version}}"'
+
+[[workspace.metadata.release.pre-release-replacements]]
+file = "Cargo.toml"
+search = 'rung-git = \{ version = "[^"]*"'
+replace = 'rung-git = { version = "{{version}}"'
+
+[[workspace.metadata.release.pre-release-replacements]]
+file = "Cargo.toml"
+search = 'rung-github = \{ version = "[^"]*"'
+replace = 'rung-github = { version = "{{version}}"'
