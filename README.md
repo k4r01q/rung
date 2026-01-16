@@ -2,6 +2,8 @@
 
 A Git workflow tool for managing stacked PRs (pull request chains).
 
+![Demo](assets/demo.gif)
+
 ## Overview
 
 Rung helps you work with dependent branches by:
