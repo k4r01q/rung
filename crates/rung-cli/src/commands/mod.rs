@@ -14,6 +14,7 @@ pub mod submit;
 pub mod sync;
 pub mod undo;
 pub mod update;
+mod utils;
 
 /// Rung - The developer's ladder for stacked PRs.
 ///
