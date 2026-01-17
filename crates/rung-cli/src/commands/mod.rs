@@ -6,6 +6,7 @@ pub mod completions;
 pub mod create;
 pub mod doctor;
 pub mod init;
+pub mod log;
 pub mod merge;
 pub mod mv;
 pub mod navigate;
@@ -14,6 +15,7 @@ pub mod submit;
 pub mod sync;
 pub mod undo;
 pub mod update;
+mod utils;
 
 /// Rung - The developer's ladder for stacked PRs.
 ///
@@ -168,4 +170,7 @@ pub enum Commands {
         #[arg(value_enum)]
         shell: clap_complete::Shell,
     },
+
+    /// Show commits between the base branch and HEAD
+    Log,
 }
