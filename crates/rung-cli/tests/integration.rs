@@ -58,19 +58,22 @@ fn setup_git_repo() -> TempDir {
     temp
 }
 
+/// Helper to create a git commit
 fn git_commit(msg: &str, dir: &TempDir) {
-    let file = dir.path().join("feature1.txt");
-    fs::write(&file, "feature 1 content").expect("Failed to write file");
+    let file = dir.path().join("feature.txt");
+    let mut current = fs::read_to_string(&file).unwrap_or_default();
+    current.push_str("\nnew line");
+    fs::write(&file, &current).expect("Failed to write file");
 
     StdCommand::new("git")
         .args(["add", "."])
-        .current_dir(&dir)
+        .current_dir(dir)
         .output()
         .expect("Failed to git add");
 
     StdCommand::new("git")
         .args(["commit", "-m", msg])
-        .current_dir(&dir)
+        .current_dir(dir)
         .output()
         .expect("Failed to commit");
 }
@@ -560,7 +563,7 @@ fn test_log_json_output() {
     let stdout = String::from_utf8_lossy(&output.get_output().stdout);
     assert!(
         serde_json::from_str::<serde_json::Value>(&stdout).is_ok(),
-        "Status --json should produce valid JSON"
+        "Log --json should produce valid JSON"
     );
 }
 
