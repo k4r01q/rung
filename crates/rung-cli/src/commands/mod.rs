@@ -28,7 +28,7 @@ mod utils;
 pub struct Cli {
     /// Output as JSON (for tooling integration).
     ///
-    /// Supported by: status, doctor, sync, submit, merge
+    /// Supported by: status, doctor, sync, submit, merge, log
     #[arg(long, global = true)]
     pub json: bool,
 
@@ -196,5 +196,5 @@ pub enum Commands {
     },
 
     /// Show commits between the base branch and HEAD
-    Log
+    Log,
 }

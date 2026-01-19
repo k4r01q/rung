@@ -58,6 +58,23 @@ fn setup_git_repo() -> TempDir {
     temp
 }
 
+fn git_commit(msg: &str, dir: &TempDir) {
+    let file = dir.path().join("feature1.txt");
+    fs::write(&file, "feature 1 content").expect("Failed to write file");
+
+    StdCommand::new("git")
+        .args(["add", "."])
+        .current_dir(&dir)
+        .output()
+        .expect("Failed to git add");
+
+    StdCommand::new("git")
+        .args(["commit", "-m", msg])
+        .current_dir(&dir)
+        .output()
+        .expect("Failed to commit");
+}
+
 /// Helper to get rung command.
 fn rung() -> Command {
     Command::new(env!("CARGO_BIN_EXE_rung"))
@@ -494,7 +511,7 @@ fn test_undo_no_backup() {
 // ============================================================================
 
 #[test]
-fn test_log() {
+fn test_log_output() {
     let temp = setup_git_repo();
 
     rung().arg("init").current_dir(&temp).assert().success();
@@ -507,20 +524,7 @@ fn test_log() {
         .success();
 
     // Make a commit on feature
-    let file = temp.path().join("feature1.txt");
-    fs::write(&file, "feature 1 content").expect("Failed to write file");
-
-    StdCommand::new("git")
-        .args(["add", "."])
-        .current_dir(&temp)
-        .output()
-        .expect("Failed to git add");
-
-    StdCommand::new("git")
-        .args(["commit", "-m", "Add feature"])
-        .current_dir(&temp)
-        .output()
-        .expect("Failed to commit");
+    git_commit("Add feature", &temp);
 
     rung()
         .arg("log")
@@ -528,6 +532,36 @@ fn test_log() {
         .assert()
         .success()
         .stdout(predicates::str::contains("Add feature"));
+}
+
+#[test]
+fn test_log_json_output() {
+    let temp = setup_git_repo();
+
+    rung().arg("init").current_dir(&temp).assert().success();
+
+    // Create first branch
+    rung()
+        .args(["create", "feature"])
+        .current_dir(&temp)
+        .assert()
+        .success();
+
+    // Make a commit on feature
+    git_commit("Add feature", &temp);
+
+    let output = rung()
+        .args(["log", "--json"])
+        .current_dir(&temp)
+        .assert()
+        .success();
+
+    // Verify it's valid JSON
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    assert!(
+        serde_json::from_str::<serde_json::Value>(&stdout).is_ok(),
+        "Status --json should produce valid JSON"
+    );
 }
 
 // ============================================================================

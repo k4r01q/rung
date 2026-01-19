@@ -16,13 +16,13 @@ struct LogOutput {
 struct CommitInfo {
     hash: String,
     message: String,
-    author: String
+    author: String,
 }
 
 impl CommitInfo {
     fn display(&self) {
         let msg = format!("{:<10} {:<25}     {}", self.hash, self.message, self.author);
-        output::info(&msg); 
+        output::info(&msg);
     }
 }
 
@@ -54,34 +54,39 @@ pub fn run(json: bool) -> Result<()> {
         bail!("Current branch has no commits");
     }
 
-    // Collect commits 
-    let commits_info: Result<Vec<CommitInfo>> = commits.iter().map(|&oid| { 
-        let commit = repo.find_commit(oid)?;
-        let hash = commit.id().to_string()[..7].to_owned();
-        let message = commit.message().unwrap_or("").trim().to_owned();
-        let sig =  commit.author();
-        let author = sig.name().unwrap_or("unknown").to_owned();
-        
-        Ok (CommitInfo { hash, message, author })
+    // Collect commits
+    let commits_info: Result<Vec<CommitInfo>> = commits
+        .iter()
+        .map(|&oid| {
+            let commit = repo.find_commit(oid)?;
+            let hash = commit.id().to_string()[..7].to_owned();
+            let message = commit.message().unwrap_or("").trim().to_owned();
+            let sig = commit.author();
+            let author = sig.name().unwrap_or("unknown").to_owned();
 
-    }).collect();
+            Ok(CommitInfo {
+                hash,
+                message,
+                author,
+            })
+        })
+        .collect();
 
     // Print commits
     if !json {
-        commits_info?.iter().for_each(|commit| commit.display()); 
-        return Ok(())
+        commits_info?.iter().for_each(CommitInfo::display);
+        return Ok(());
     }
-    
+
     //  Display json output
     let log_output = LogOutput {
         commits: commits_info?,
         branch: current,
         parent: base.to_string(),
     };
-    
+
     let json_log_output = serde_json::to_string_pretty(&log_output)?;
     println!("{json_log_output}");
-
 
     Ok(())
 }
