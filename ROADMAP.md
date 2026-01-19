@@ -39,7 +39,7 @@ These improvements make Rung more pleasant to use and easier to contribute to:
 - [x] **Shell completions** ([#18](https://github.com/auswm85/rung/issues/18)) — Tab completion for bash, zsh, and fish
 - [x] **rung log command** ([#22](https://github.com/auswm85/rung/issues/22)) — Show commits on the current stack branch
 - [x] **Interactive navigation** (`rung move`) — TUI picker to jump to any branch in the stack
-- [ ] **NO_COLOR support** ([#20](https://github.com/auswm85/rung/issues/20)) — Respect the `NO_COLOR` environment variable for accessibility and scripting
+- [x] **NO_COLOR support** ([#20](https://github.com/auswm85/rung/issues/20)) — Respect the `NO_COLOR` environment variable for accessibility and scripting
 
 ### Security & Safety
 
