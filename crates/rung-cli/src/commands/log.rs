@@ -51,7 +51,8 @@ pub fn run(json: bool) -> Result<()> {
     let commits = repo.commits_between(base_oid, head_oid)?;
 
     if commits.is_empty() {
-        bail!("Current branch has no commits");
+        output::warn("Current branch has no commits");
+        return Ok(());
     }
 
     // Collect commits
